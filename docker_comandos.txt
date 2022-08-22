@@ -1,0 +1,184 @@
+# Hola mundo con docker
+$ docker run hello-world
+# Ver contenedores corriendo
+$ docker ps
+# Ver todos los contenedores
+$ docker ps -a
+# Inspecionar la config un contenedor
+$ docker inspect <container_id or container_name>
+# Crear un contenedor con un nombre personalizado
+$ docker run --name <custom_name> <image_name>
+# Renombrar un contenedor
+$ docker rename --name <old_name> <new_name>
+# Eliminar un contenedor
+$ docker rm <container_id or container_name>
+# Eliminar todos los contenedores apagados
+$ docker container prune
+# Eliminar TODOS los contenedores
+$ docker rm -f $(docker ps -aq)
+
+2. MODO INTERACTIVO
+$ sudo  docker run -it <nombre imagen> 
+-i: interactivo
+-t: abre la consola
+
+$ sudo  docker run -it ubuntu 
+
+--->desde gitbash-->  winpty docker run -it ubuntu
+
+#  ejecuta una imagen de ubuntu, si no está localmente la descarga
+$ docker run ubuntu
+
+# lista los contenedores detenidos y ejecución
+$ docker ps -a
+
+# ejecuta la imagen de ubuntu e ingresa a la terminal del contenedor CLI
+# -i: modo interactivo
+# -t: abre el TTY (consola)
+$ docker run -it ubuntu
+$ docker ps -a (veo todos los contenedores)
+$ docker --name <nombre> -d ubuntu -f <comando>
+$ docker --name alwaysup -d ubuntu tail -f /dev/null (mantiene el contenedor activo)
+$ docker exec -it alwaysup bash (entro al contenedor)
+$ docker inspect --format ‘{{.State.Pid}}’ alwaysup (veo el main process del ubuntu)
+desde Linux si ejecuto kill -9 <PID> mata el proceso dentro del contenedor de ubuntu pero desde MAC no funciona
+
+EXPONIENDO CONTENEDORES
+$ docker run -d --name proxy nginx (corro un nginx)
+$ docker stop proxy (apaga el contenedor)
+$ docker rm proxy (borro el contenedor)
+$ docker rm -f <contenedor> (lo para y lo borra)
+$ docker run -d --name proxy -p 8080:80 nginx (corro un nginx y expongo el puerto 80 del contenedor en el puerto 8080 de mi máquina)
+localhost:8080 (desde mi navegador compruebo que funcione)
+$ docker logs proxy (veo los logs)
+$ docker logs -f proxy (hago un follow del log)
+$ docker logs --tail 10 -f proxy (veo y sigo solo las 10 últimas entradas del log)
+
+docker run -d --name [name] -p [HostPort/8081]:[ContainerPort/80] [imagen/nginx]
+
+docker logs --tail 10 -f proxy
+
+****BIND MOUNTS*****
+$ mkdir dockerdata (creo un directorio en mi máquina)
+$ docker run -d --name db mongo
+$ docker ps (veo los contenedores activos)
+$ docker exec -it db bash (entro al bash del contenedor)
+$ mongo (me conecto a la BBDD)
+
+    shows dbs (listo las BBDD)
+    use platzi ( creo la BBDD platzi)
+    db.users.insert({“nombre”:“guido”}) (inserto un nuevo dato)
+    db.users.find() (veo el dato que cargué)
+    $ docker run -d --name db -v <path de mi maquina>:<path dentro del contenedor(/data/db mongo)> (corro un contenedor de mongo y creo un bind mount)
+
+#Para quienes esten usando Win10, tuve un problema de que estaba intentando linkear la carpeta de mi local con la del contenedor y tener los datos de mongo, insertaba datos en la BD pero no se me creaban los archivos en mi pc.
+#Para el PATH en windows, tuve que usar “” y para el PATH dentro del contenedor tuve que usar “/”
+
+docker run  -d --name mongodb -v C:\Users\jaarevalo\Documents\Developer\Cursos\Docker\mongodata:/data/db mongo
+
+#Estando en windows para no escribir toda la ruta del bind mount me pare en el directorio y ejecute este comando
+---> $ docker run -d --name db -v ${pwd}:/data/db mongo
+
+mkdir dockerdata
+docker run -d --name db mongo
+docker exec -it db bash
+# mongo
+> show dbs
+> use platzi
+> db.users.insert({"nombre": "Boris"})
+> db.users.find()
+> exit
+# exit
+docker rm -f db
+
+****IMPORTANTE BINDMOUNT**** APACHE
+sudo docker run -d --name db -v "/$(pwd)/mongodata":/data/db mongo
+docker run -d --name db -v "/$(pwd)":/data/db mongo
+
+**** CLASE DE VOLUMENES *****
+$ docker volume ls (listo los volumes)
+$ docker volume create dbdata (creo un volume)
+$ docker run -d --name db --mount src=dbdata,dst=/data/db mongo (corro la BBDD y monto el volume)
+$ docker run -d --name db --mount src=dbdata,dst=//data/db mongo  --->(para mi en windows 10)
+$ docker inspect db (veo la información detallada del contenedor)
+$ mongo (me conecto a la BBDD)
+    shows dbs (listo las BBDD)
+    use platzi ( creo la BBDD platzi)
+    db.users.insert({“nombre”:“guido”}) (inserto un nuevo dato)
+    db.users.find() (veo el dato que cargué)
+
+** CLASE insertar y extraer archivos de un contenedor *****
+$ touch prueba.txt (creo un archivo en mi máquina)
+$ docker run -d --name copytest ubuntu tail -f /dev/null (corron un ubuntu y le agrego el tail para que quede activo)
+$ docker run -d --name copytest ubuntu tail -f //dev/null (win 10)
+$ docker exec -it copytest bash (entro al contenedor)
+$ mkdir testing (creo un directorio en el contenedor)
+$ docker cp prueba.txt copytest:/testing/test.txt (copio el archivo dentro del contenedor)
+$ docker cp copytest:/testing localtesting (copio el directorio de un contenedor a mi máquina)
+con “docker cp” no hace falta que el contenedor esté corriendo
+
+
+** CLASE DE IMAGENES --> Concepto Fundamental.
+Descargar imagenes
+
+$ docker history [imagen]
+$ docker image rm -f {id_image}
+
+$ docker image ls (veo las imágenes que tengo localmente)
+$ docker pull ubuntu:20.04 (bajo la imagen de ubuntu con una versión específica)
+$ docker pull [imageName]  
+$ docker pull [imageName]:[versionImage]
+
+** CLASE CREAR PROPIAS IMAGENES. ********** IMPORTANTE DATAREDES.
+$ mkdir imagenes (creo un directorio en mi máquina)
+$ cd imagenes (entro al directorio)
+$ touch Dockerfile (creo un Dockerfile)
+$ code . (abro code en el direcotrio en el que estoy)
+
+##Contenido del Dockerfile##
+FROM ubuntu:latest
+RUN touch /ust/src/hola-platzi.txt (comando a ejecutar en tiempo de build)
+##fin##
+
+$ docker build -t ubuntu:platzi . (creo una imagen con el contexto de build <directorio>)
+$ docker run -it ubuntu:platzi (corro el contenedor con la nueva imagen)
+$ docker login (me logueo en docker hub)
+$ docker tag ubuntu:platzi jmantillap/ubuntu:platzy (cambio el tag para poder subirla a mi docker hub)
+$ docker push jmantillap/ubuntu:platzi (publico la imagen a mi docker hub)
+
+
+**** CLASE El sitemas de capas. **************
+$ docker history ubuntu:platzi (veo la info de como se construyó cada capa)
+$ dive ubuntu:platzi (veo la info de la imagen con el programa dive)
+
+Para usar la herramienta hay que descargar el .exe, ponerlo en algun lado de preferencia cerca de c:/dive/dive.exe algo así y ejecutar
+c:\dive\dive.exe ubuntu 
+
+https://github.com/wagoodman/dive
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
