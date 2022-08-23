@@ -158,6 +158,142 @@ https://github.com/wagoodman/dive
 
 
 
+**** CLASE DOCKER PARA DESARROLLAR APLICACIONES **********
+$ git clone https://github.com/platzi/docker
+$ docker build -t platziapp . (creo la imagen local)
+$ docker image ls (listo las imagenes locales)
+$ docker run --rm -p 3000:3000 platziapp (creo el contenedor y cuando se detenga se borra, lo publica el puerto 3000)
+$ docker ps (veo los contenedores activos)
+
+*** CLASE APROVECHANDO CACHE ESTRUCTURAR IMAGENES ****
+
+$ docker build platziapp . (creo la imagen local)
+$ docker run --rm -p 3000:3000 -v pathlocal/index.js:pathcontenedor/index.js platziapp (corro un contenedor y monto el archivo index.js para que se actualice dinámicamente con nodemon que está declarado en mi Dockerfile)
+
+$ docker run --rm -p 3000:3000 -v "/$(pwd)/":/usr/src platziapp
+
+##dockerfile
+FROM node:14
+COPY ["package.json", "package-lock.json", "/usr/src/"]
+WORKDIR /usr/src
+RUN npm install
+COPY [".", "/usr/src/"]
+EXPOSE 3000
+CMD ["npx", "nodemon", "-L", "index.js"]  (importante el -L para windows)
+##fin Dockerfile
+
+
+***** CLASE DOCKER NETWORKING *************
+$ docker network ls (listo las redes)
+$ docker network create --attachable plazinet (creo la red)
+$ docker inspect plazinet (veo toda la definición de la red creada)
+$ docker run -d --name db mongo (creo el contenedor de la BBDD)
+$ docker network connect plazinet db (conecto el contenedor “db” a la red “platzinet”)
+$ docker run -d --name app -p 3000:3000 --env MONGO_URL=mongodb://db:27017/test platziapp (corro el contenedor “app” y le paso una variable)
+$ docker network connect plazinet app (conecto el contenedor “app” a la red “plazinet”)
+
+*** CLASE DOCKER COMPOSE ********************************
+$ docker-compose up
+$ docker-compose up -d
+$ docker-compose down
+
+*** CLASE SUBCOMANDOS DE DOCKER COMPOSE *********
+
+$ docker-compose ps
+
+$ docker network ls (listo las redes)
+$ docker network inspect docker_default (veo la definición de la red)
+$ docker-compose logs (veo todos los logs)
+$ docker-compose logs app (solo veo el log de “app”)
+$ docker-compose logs -f app (hago un follow del log de app)
+$ docker-compose logs -f app db (hago un follow del log de app y db) 
+$ docker-compose exec app bash (entro al shell del contenedor app)
+$ docker-compose ps (veo los contenedores generados por docker compose)
+$ docker-compose down (borro todo lo generado por docker compose)
+
+
+***** CLASE DOCKER COMPOSE COMO HERRAMIENTA DE DESARROLLO **********
+$ docker-compose build (crea las imágenes)
+$ docker-compose up -d (crea los servicios/contenedores)
+$ docker-compose logs app (veo los logs de “app”)
+$ docker-compose logs -f app (hago un follow de los logs de “app”)
+
+$ docker-compose build app
+
+##Docker-compose
+version: "3.8"
+services:
+  app:
+	# crea una imagen con los ficheros del directorio actual.
+    build: .
+    environment:
+      MONGO_URL: "mongodb://db:27017/test"
+    depends_on:
+      - db
+    ports:
+      - "3000:3000"
+	# Sección para definir los bindmount.
+    volumes: 
+		#<local path>:<container path> # el directorio "<.>" actual   se montará en "/usr/src" en el contenedor.
+      - .:/usr/src			
+	  # indica que ficheros debe ignorar
+      - /usr/src/node_modules
+	# Permite pasarle un comando a ejecutar al servicio app.
+    command: npx nodemon -L index.js
+  db:
+    image: mongo
+
+
+*****CLASE COMPOSE EN EQUIPO *******
+
+$ touch docker-compose.override.yml (creo el archivo override)
+$ docker-compose up -d (crea los servicios/contenedores)
+$ docker-compose exec app bash (entro al bash del contenedor app)
+$ docker-compose ps (veo los contenedores del compose)
+/*
+...
+ports:
+	- 3000-3010:3000  # para abrir un rango de puertos
+...
+*/
+$ docker-compose up -d --scale app=2 (escalo dos instancias de app, previamente tengo que definir un rango de puertos en el archivo compose)
+$ docker-compose down (borro todo lo creado con compose)
+
+
+*** CLASE ADMINISTRANDO TU AMBIENTE DOCKER *************
+$ docker ps -a (veo todos los contenedores de mi máquina)
+$ docker container prune (borra todos los contenedores inactivos)
+$ docker rm -f $(docker ps -aq) (borra todos los contenedores que estén corriendo o apagados)
+$ docker network ls (lista todas las redes)
+$ docker volume ls (lista todos los volumes)
+$ docker image ls (lista todas las imágenes)
+$ docker system prune (borra todo lo que no se esté usando)
+$ docker run -d --name app --memory 1g platziapp (limito el uso de memoria)
+$ docker stats (veo cuantos recursos consume docker en mi sistema)
+$ docker inspect app (puedo ver si el proceso muere por falta de recursos)
+
+Commandos y Descripciones
+
+$ docker stats
+
+$ docker system df Show docker disk usage
+$ docker system events Get real time events from the server
+$ docker system infoDisplay system-wide information
+$ docker system prune Remove unused data
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
